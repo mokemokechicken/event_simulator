@@ -38,7 +38,14 @@ def get_event_list():
 @post('/api/simulate')
 def simulate():
     json_body = request.json
-    cnt_hash = web_simulator.simulate_sequence(json_body['init_sequence'], json_body['target_event'])
+    init_sequence = json_body['init_sequence']
+    target_event_list = [json_body['target_event']]
+
+    for event_name in target_event_list + init_sequence:
+        if event_name not in web_simulator.data_feeder.mapping:
+            return {"error": "Event %s is not found" % event_name}
+
+    cnt_hash = web_simulator.simulate_sequence(init_sequence, target_event_list)
     return cnt_hash
 
 

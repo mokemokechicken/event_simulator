@@ -3,22 +3,37 @@
 <head>
     <link rel="stylesheet" href="/public/css/default.css" type="text/css" />
     <script src="//d3js.org/d3.v3.min.js"></script>
-    <script src="/public/js/simulate.js"></script>
+    <script src="/public/js/tree_view.js"></script>
 </head>
 <body>
 <div id="svg" style="width: 800; height: 600"></div>
 
 <script>
-    TreeView(SVGCanvas({
+    var treeView = TreeView(SVGCanvas({
         width: 800,
         height: 600,
         canvas: "#svg"
-    }).svg)
-    .draw({
+    }).svg);
+
+    treeView.draw({
         "id": "root",
         "name": "root"
     });
-    ;
+
+    d3.json('/api/events', function(err, json) {
+      console.log(json);
+    });
+
+    var req = {init_sequence: ["_new_"], target_event: "activities.shopping_complete"};
+    d3.json('/api/simulate')
+    .header("Content-Type", "application/json")
+    .post(JSON.stringify(req), function(err, json) {
+        console.log(json);
+    });
+
+
+
+
 </script>
 </body>
 </html>
