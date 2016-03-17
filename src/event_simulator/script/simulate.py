@@ -8,9 +8,10 @@ from pandas import json
 import tensorflow as tf
 import numpy as np
 
-from event_simulator.lib.builder import build_model, train_model, DataFeeder, simulate_sequence
+from event_simulator.lib.builder import build_model, train_model, simulate_sequence
+from event_simulator.lib.data_feeder import DataFeeder
 from event_simulator.lib.ptb_model import SmallConfig
-from event_simulator.lib.simulator import Simulator
+from event_simulator.lib.simulator import Simulator, simulate_sequence
 from event_simulator.lib.util import ensure_base_dir
 
 

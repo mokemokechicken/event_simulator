@@ -1,11 +1,15 @@
 # coding: utf8
+import itertools as it
 import os
 import pickle
 import gzip
 from collections import Counter
 
+import numpy as np
+
+from event_simulator.lib.data_feeder import DataFeeder
 from event_simulator.lib.util import ensure_base_dir
-from .builder import build_model, simulate_sequence
+from .builder import build_model
 import hashlib
 
 
@@ -106,3 +110,50 @@ class Simulator:
         else:
             counter['END'] += num
 
+
+def simulate_sequence(session, model, init_sequence=None):
+    init_sequence = init_sequence or []
+    state = model.initial_state.eval()
+    primes = [DataFeeder.START_ID] + init_sequence
+    print("generating...")
+    for event_id in primes[:-1]:
+        x = np.array([event_id] * model.batch_size)
+        state, = session.run([model.final_state],
+                             {model.input_data: x.reshape((model.batch_size, 1)),
+                              model.initial_state: state})
+
+    batch_samples = []
+    cur = np.array([primes[-1]] * model.batch_size)
+    finished = np.zeros(model.batch_size, dtype=bool)
+    steps = 0
+
+    while not all(finished):
+        steps += 1
+        prob, state, = session.run([model.prob, model.final_state],
+                                   {model.input_data: cur.reshape((model.batch_size, 1)),
+                                    model.initial_state: state})
+        sample = weighted_pick(prob)
+        batch_samples.append(sample)
+        cur = sample
+        z = cur == DataFeeder.END_ID
+        zz = cur == DataFeeder.PAD_ID
+        finished |= z | zz
+        if steps % 10 == 0:
+            print("step %s, %s%% ended" % (steps, 100*np.sum(finished)/model.batch_size))
+
+    ret = []
+    for seq in zip(*batch_samples):
+        filtered = it.filterfalse(lambda x: x == DataFeeder.START_ID, seq)
+        ended = it.takewhile(lambda x: x not in (DataFeeder.END_ID, DataFeeder.PAD_ID), filtered)
+        ret.append(list(ended))
+    return ret
+
+
+def weighted_pick(weights):
+    ts = np.cumsum(weights, axis=1)
+    ss = np.sum(weights, axis=1)
+    voc_size = weights.shape[1] - 1
+    ret = []
+    for t, s in zip(ts, ss):
+        ret.append(min(int(np.searchsorted(t, np.random.rand(1.0) * s)), voc_size))
+    return np.array(ret)

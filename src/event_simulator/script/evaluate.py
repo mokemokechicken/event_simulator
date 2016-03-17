@@ -8,7 +8,7 @@ from collections import defaultdict
 import tensorflow as tf
 import pandas as pd
 
-from event_simulator.lib.builder import DataFeeder
+from event_simulator.lib.data_feeder import DataFeeder
 from event_simulator.lib.evaluator import compare_data
 
 flags = tf.flags
