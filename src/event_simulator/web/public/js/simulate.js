@@ -1,19 +1,24 @@
-var svgCanvas = SVGCanvas();
-var treeView = TreeView(svgCanvas.svg);
+//var svgCanvas = SVGCanvas();
+//var treeView = TreeView(svgCanvas.svg);
 
-d3.json("/public/data/tree.json", function(error, json) {
-    if (error) throw error;
-    treeView.draw(json);
-});
+//d3.json("/public/data/tree.json", function(error, json) {
+//    if (error) throw error;
+//    treeView.draw(json);
+//});
 
+(function (window) {
+window.SVGCanvas = SVGCanvas;
+window.TreeView = TreeView;
 
 function SVGCanvas(options) {
     options = options || {};
     var self = this;
     var width = options.width || 960,
-        height = options.height || 500;
+        height = options.height || 500,
+        canvas = options.canvas || 'body'
+        ;
 
-    self.svg = d3.select("body").append("svg")
+    self.svg = d3.select(canvas).append("svg")
             .attr("width", width)
             .attr("height", height)
             ;
@@ -23,16 +28,13 @@ function SVGCanvas(options) {
     return self;
 }
 
-function TreeView(svg) {
+function TreeView(svg, options) {
+    var options = options || {};
     var self = this;
     var tree = d3.layout.tree()
             //.size([width-100, height-100])
-            .nodeSize([120, 120])
-            ;
-    self.draw = function(root) {
-        return drawTree(svg, tree, root);
-    };
-
+            .nodeSize(options.nodeSize || [120, 120]);
+    self.draw = function(root) { return drawTree(svg, tree, root); };
     return self;
 }
 
@@ -146,3 +148,5 @@ console.log(d);
 function nodeY(d) {
   return d.y;
 }
+
+})(window);

@@ -3,8 +3,22 @@
 <head>
     <link rel="stylesheet" href="/public/css/default.css" type="text/css" />
     <script src="//d3js.org/d3.v3.min.js"></script>
+    <script src="/public/js/simulate.js"></script>
 </head>
 <body>
+<div id="svg" style="width: 800; height: 600"></div>
+
+<script>
+    TreeView(SVGCanvas({
+        width: 800,
+        height: 600,
+        canvas: "#svg"
+    }).svg)
+    .draw({
+        "id": "root",
+        "name": "root"
+    });
+    ;
+</script>
 </body>
-    <script src="/public/js/simulate.js"></script>
 </html>

@@ -18,6 +18,7 @@ class DataFeeder:
     PAD_ID = 0
     START_ID = 1
     END_ID = 2
+    NORMAL_EVENT_START_ID = 3
 
     def __init__(self, config=None):
         if config:

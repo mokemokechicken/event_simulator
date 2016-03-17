@@ -23,36 +23,39 @@ class Simulator:
         self.num_sample = config.batch_size
         _, self.model = build_model(self.session, self.config, self.model_path)
 
-    def simulate_sequence(self, init_sequence, target_event_list):
+    def simulate_sequence(self, init_sequence, target_event_list, print_output=True):
         sequence_list = self.simulate(init_sequence)
         cnt_hash = self.get_count_hash(sequence_list, target_event_list)
         count_hash = cnt_hash['count_hash']
         target_next_hash = cnt_hash['target_next_hash']
         not_target_next_hash = cnt_hash['not_target_next_hash']
-        next_hash = self.get_next_event_hash(sequence_list)
+        cnt_hash['next_hash'] = next_hash = self.get_next_event_hash(sequence_list)
 
-        print("============= Target Event =================")
-        for event_name in target_event_list:
-            cnt = count_hash[event_name]
-            print("%s -- count=%s percentage=%.2f%%" % (event_name, cnt, cnt / self.num_sample * 100))
+        if print_output:
+            print("============= Target Event =================")
+            for event_name in target_event_list:
+                cnt = count_hash[event_name]
+                print("%s -- count=%s percentage=%.2f%%" % (event_name, cnt, cnt / self.num_sample * 100))
 
-            print(" == target ==")
-            for next_event_name, n_cnt in sorted(target_next_hash[event_name].items(), key=lambda x: -x[1])[:5]:
-                if n_cnt / cnt < 0.01:
+                print(" == target ==")
+                for next_event_name, n_cnt in sorted(target_next_hash[event_name].items(), key=lambda x: -x[1])[:5]:
+                    if n_cnt / cnt < 0.01:
+                        break
+                    print("       %s -- count=%s percentage=%.2f%%" % (next_event_name, n_cnt, n_cnt / cnt * 100))
+
+                print(" == NOT target ==")
+                for next_event_name, n_cnt in sorted(not_target_next_hash[event_name].items(), key=lambda x: -x[1])[:5]:
+                    if n_cnt / cnt < 0.01:
+                        break
+                    print("       %s -- count=%s percentage=%.2f%%" % (next_event_name, n_cnt, n_cnt / (self.num_sample - cnt) * 100))
+
+            print("============= Next Event =================")
+            for event_name, cnt in sorted(next_hash.items(), key=lambda x: -x[1]):
+                if cnt / self.num_sample < 0.001:
                     break
-                print("       %s -- count=%s percentage=%.2f%%" % (next_event_name, n_cnt, n_cnt / cnt * 100))
+                print("%s -- count=%s percentage=%.2f%%" % (event_name, cnt, cnt / self.num_sample * 100))
 
-            print(" == NOT target ==")
-            for next_event_name, n_cnt in sorted(not_target_next_hash[event_name].items(), key=lambda x: -x[1])[:5]:
-                if n_cnt / cnt < 0.01:
-                    break
-                print("       %s -- count=%s percentage=%.2f%%" % (next_event_name, n_cnt, n_cnt / (self.num_sample - cnt) * 100))
-
-        print("============= Next Event =================")
-        for event_name, cnt in sorted(next_hash.items(), key=lambda x: -x[1]):
-            if cnt / self.num_sample < 0.001:
-                break
-            print("%s -- count=%s percentage=%.2f%%" % (event_name, cnt, cnt / self.num_sample * 100))
+        return cnt_hash
 
     @property
     def cache_dir(self):
