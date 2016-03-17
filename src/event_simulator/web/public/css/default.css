@@ -1,0 +1,15 @@
+.link {
+    stroke: #ccc;
+}
+
+.node rect {
+    fill-opacity: 0;
+    stroke-width: 1px;
+    stroke: #0f6faf;
+    stroke-opacity: .9;
+}
+
+.node text {
+    pointer-events: none;
+    font: 10px sans-serif;
+}
