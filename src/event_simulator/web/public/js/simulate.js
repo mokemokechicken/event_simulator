@@ -1,55 +1,93 @@
-var width = 960,
-    height = 500
-
-var tree = d3.layout.tree()
-        //.size([width-100, height-100])
-        .nodeSize([120, 120])
-        ;
-
-var svg = d3.select("body").append("svg")
-        .attr("width", width)
-        .attr("height", height)
-        ;
-
-enableScrollAndZoom(svg, width, height, 0, 100);
+var svgCanvas = SVGCanvas();
+var treeView = TreeView(svgCanvas.svg);
 
 d3.json("/public/data/tree.json", function(error, json) {
     if (error) throw error;
+    treeView.draw(json);
+});
 
-    var nodes = tree.nodes(json);
-    var links = tree.links(nodes);
+
+function SVGCanvas(options) {
+    options = options || {};
+    var self = this;
+    var width = options.width || 960,
+        height = options.height || 500;
+
+    self.svg = d3.select("body").append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            ;
+
+    enableScrollAndZoom(self.svg, width, height, 0, 100);
+
+    return self;
+}
+
+function TreeView(svg) {
+    var self = this;
+    var tree = d3.layout.tree()
+            //.size([width-100, height-100])
+            .nodeSize([120, 120])
+            ;
+    self.draw = function(root) {
+        return drawTree(svg, tree, root);
+    };
+
+    return self;
+}
+
+function drawTree(svg, tree, root) {
+    var duration = 200;
     var diagonal = d3.svg.diagonal();
+    var nodes = tree.nodes(root);
 
-    var node = svg.selectAll(".node")
-        .data(nodes) //nodesの数分gを作る。
-        .enter()
+    // Update Nodes
+    var node = svg.selectAll(".node").data(nodes, nodeId);
+
+    node.enter()  // 新規に追加されたものだけ、こっちに来るようだ
         .append("g")
         .attr("class","node")
-        .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")";})
-        ; //ノードの場所まで移動
+        .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")";});
 
-    node.on('click', function(d, i) {
-        console.log([d,i]);
-    });
+    node.exit().remove();  // nodeId で特定されているので、削除ができる。
+
+    node.transition()   // 全ての nodes に対する操作
+        .duration(duration)
+        .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")"; });
 
     node.append("circle")
-        .attr("r", 60)
+        .attr("r", 40)
         .attr("fill","steelblue");
 
     node.append("text")
         .text(function(d) { return d.name})
         .attr("x", 5);
 
-    //linksで作ったsource、targetでdiagonal曲線を作る。
-    svg.selectAll(".link")
-        .data(links)
-        .enter()
+    node.on('click', function(d, i) {
+        if (!d.children) {
+            d.children = [];
+        }
+        var id = d.name + '-' + (d.children.length+1);
+        d.children.push({id: id, name: id, parent: d});
+        drawTree(svg, tree, root);
+    });
+
+    // update Links
+    var link = svg.selectAll(".link").data(tree.links(nodes), linkId);
+    link.enter()
         .append("path")
         .attr("class","link")
         .attr("fill", "none")
         .attr("stroke", "red")
-        .attr("d",diagonal);
-});
+        .attr("d", diagonal);
+
+    link.exit().remove();
+
+    link.transition()
+        .duration(duration)
+        .attr("d", diagonal);
+}
+
 
 function enableScrollAndZoom(svg, width, height, centerX, centerY) {
     centerX = centerX || 0;
@@ -89,4 +127,22 @@ function enableScrollAndZoom(svg, width, height, centerX, centerY) {
         return svg.attr("viewBox", "" + vbox_x + " " + vbox_y + " " + vbox_width + " " + vbox_height);
     }
     return svg;
+}
+
+
+function linkId(d) {
+  return d.source.id + "-" + d.target.id;
+}
+
+function nodeId(d) {
+  return d.id;
+}
+
+function nodeX(d) {
+console.log(d);
+  return d.x;
+}
+
+function nodeY(d) {
+  return d.y;
 }
