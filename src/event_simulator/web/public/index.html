@@ -4,6 +4,7 @@
     <link rel="stylesheet" href="/public/css/default.css" type="text/css" />
     <script src="//d3js.org/d3.v3.min.js"></script>
     <script src="/public/js/tree_view.js"></script>
+    <script src="/public/js/simulator.js"></script>
 </head>
 <body>
 <div id="svg" style="width: 800; height: 600"></div>
@@ -15,24 +16,14 @@
         canvas: "#svg"
     }).svg);
 
-    treeView.draw({
-        "id": "root",
-        "name": "root"
+    var sim = Simulator({
+        treeView: treeView,
+        root: {
+            id: "_new_",
+            name: "_new_",
+            seq: ["_new_"]
+        }
     });
-
-    d3.json('/api/events', function(err, json) {
-      console.log(json);
-    });
-
-    var req = {init_sequence: ["_new_"], target_event: "activities.shopping_complete"};
-    d3.json('/api/simulate')
-    .header("Content-Type", "application/json")
-    .post(JSON.stringify(req), function(err, json) {
-        console.log(json);
-    });
-
-
-
 
 </script>
 </body>
