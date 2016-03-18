@@ -34,11 +34,12 @@ function TreeView(svg, options) {
     var tree = d3.layout.tree()
             //.size([width-100, height-100])
             .nodeSize(options.nodeSize || [120, 120]);
-    self.draw = function(root) { return drawTree(svg, tree, root); };
+    self.draw = function(root, cb) { return drawTree(svg, tree, root, cb); };
     return self;
 }
 
-function drawTree(svg, tree, root) {
+function drawTree(svg, tree, root, cb) {
+    cb = cb || dummyCallback;
     var duration = 200;
     var diagonal = d3.svg.diagonal();
     var nodes = tree.nodes(root);
@@ -49,7 +50,13 @@ function drawTree(svg, tree, root) {
     node.enter()  // 新規に追加されたものだけ、こっちに来るようだ
         .append("g")
         .attr("class","node")
-        .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")";});
+        .attr("transform", function(d){
+            if (d.parent) {
+                return "translate("+ d.parent.x + "," + d.parent.y + ")";
+            } else {
+                return "translate("+ d.x + "," + d.y + ")";
+            }
+        });
 
     node.exit().remove();  // nodeId で特定されているので、削除ができる。
 
@@ -57,39 +64,49 @@ function drawTree(svg, tree, root) {
         .duration(duration)
         .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")"; });
 
-    node.append("circle")
-        .attr("r", 40)
-        .attr("fill","steelblue");
-
-    node.append("text")
-        .text(function(d) { return d.name})
-        .attr("x", 5);
-
-    node.on('click', function(d, i) {
-        if (!d.children) {
-            d.children = [];
-        }
-        var id = d.name + '-' + (d.children.length+1);
-        d.children.push({id: id, name: id, parent: d});
-        drawTree(svg, tree, root);
-    });
-
     // update Links
     var link = svg.selectAll(".link").data(tree.links(nodes), linkId);
+
     link.enter()
         .append("path")
         .attr("class","link")
-        .attr("fill", "none")
-        .attr("stroke", "red")
-        .attr("d", diagonal);
+        .attr("d", function(d) {
+            console.log(d);
+            var o = {x: d.source.x, y: d.source.y};
+            return diagonal({source: o, target: o});
+        });
 
     link.exit().remove();
 
     link.transition()
         .duration(duration)
         .attr("d", diagonal);
-}
 
+    return cb(node, link);
+
+    function dummyCallback(node, link) {
+        node.append("circle")
+            .attr("r", 40)
+            .attr("fill","steelblue");
+
+        node.append("text")
+            .text(function(d) { return d.name})
+            .attr("x", 5);
+
+        node.on('click', function(d, i) {
+            if (!d.children) {
+                d.children = [];
+            }
+            var id = d.name + '-' + (d.children.length+1);
+            d.children.push({id: id, name: id, parent: d});
+            drawTree(svg, tree, root);
+        });
+
+        link.attr("fill", "none")
+            .attr("stroke", "red");
+
+    }
+}
 
 function enableScrollAndZoom(svg, width, height, centerX, centerY) {
     centerX = centerX || 0;
