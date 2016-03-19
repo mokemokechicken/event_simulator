@@ -71,7 +71,6 @@ function drawTree(svg, tree, root, cb) {
         .append("path")
         .attr("class","link")
         .attr("d", function(d) {
-            console.log(d);
             var o = {x: d.source.x, y: d.source.y};
             return diagonal({source: o, target: o});
         });

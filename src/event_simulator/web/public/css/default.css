@@ -1,5 +1,13 @@
+#svg {
+    cursor: move;
+}
+
 .link {
     stroke: #ccc;
+}
+
+.node {
+    cursor: pointer;
 }
 
 .node rect {
