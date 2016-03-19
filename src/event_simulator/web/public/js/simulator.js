@@ -23,7 +23,7 @@ var Simulator = function(options) {
 
     treeView.draw(root, callback);
 
-    function callback(node, link) {
+    function callback(node, link, nodeEnter, linkEnter) {
         var lineStep = 15;
         var percentFormat = d3.format(".1%");
 
@@ -31,7 +31,7 @@ var Simulator = function(options) {
         //  Target Rate が Parent より上がれば 緑、下がれば、赤
         //  Transition Rate が高いほど太い
         //
-        link.attr("fill", "none")
+        linkEnter.attr("fill", "none")
             .attr("stroke-width", function(d) {
                 if (d.source.result) {
                     var tr = d.source.result.getTransitionRate(d.target.event);
@@ -60,10 +60,15 @@ var Simulator = function(options) {
         //  |---------------------------------------------------------
         //
 
-        node.append("rect")
+        nodeEnter.append("rect")
             .attr("x", -rectWidth/2)
             .attr("width", rectWidth)
             .attr("height", rectHeight)
+            .append("title")
+            .text(function(d) { return d.name})
+            ;
+
+        node.selectAll("rect")
             .attr("fill", function(d) {
                 if (d.result && d.parent) {
                     var greenRate = d.result.targetCount / (d.parent.result.targetCount + d.result.targetCount);
@@ -71,19 +76,22 @@ var Simulator = function(options) {
                 } else {
                     return "#ccc";
                 }
-            })
-            .append("title")
-            .text(function(d) { return d.name})
-            ;
+            });
 
-        node.append("text")  // label name
+        /////////// label name //////////////
+        nodeEnter.append("text")
             .text(function(d) { return _.last(d.name.split(/[.:=]/))})
-            // .attr("x", (-rectWidth/2) + 20)
             .attr("y", lineStep)
             .style("text-anchor", "middle")
             ;
 
-        node.append("text")  // Rate To Target
+        ///////// Rate To Target /////////
+        nodeEnter.append("text")
+            .attr("class", "rate-to-target")
+            .attr("y", lineStep * 2)
+            .style("text-anchor", "middle");
+
+        node.selectAll(".rate-to-target")
             .text(function(d) {
                 if (d.result) {
                     return "Target: " + percentFormat(d.result.targetRate);
@@ -91,10 +99,9 @@ var Simulator = function(options) {
                     return "";
                 }
             })
-            .attr("y", lineStep * 2)
-            .style("text-anchor", "middle");
 
-        node.append("text")  // Transition Rate from Parent
+        // Transition Rate from Parent
+        nodeEnter.append("text")
             .text(function(d) {
                 if (d.parent && d.parent.result) {
                     return percentFormat(d.parent.result.getTransitionRate(d.event));
@@ -103,7 +110,7 @@ var Simulator = function(options) {
             .attr("y", -lineStep -3)
             .style("text-anchor", "middle");
 
-        node.append("text")  // OnTarget|OnNotTarget Transition Rate from Parent
+        nodeEnter.append("text")  // OnTarget|OnNotTarget Transition Rate from Parent
             .text(function(d) {
                 if (d.parent && d.parent.result) {
                     var parentResult = d.parent.result;
@@ -114,10 +121,11 @@ var Simulator = function(options) {
             .attr("y", -3)
             .style("text-anchor", "middle");
 
-        node.on('click', onClickNode);
+        nodeEnter.on('dblclick', onClickNode);
     }
 
-    function onClickNode(d, i) {
+    function onClickNode(d) {
+        d3.event.stopPropagation();
         if (isBusy) return;
 
         // Show/Hide children nodes
@@ -125,18 +133,20 @@ var Simulator = function(options) {
             if (d._children) { // restore from cache
                 d.children = d._children;
                 delete d._children;
-                return treeView.draw(root, callback);
+                redrew();
+                return;
             } else {
                 d.children = [];
             }
         } else {
             d._children = d.children;
             delete d.children;
-            return treeView.draw(root, callback);
+            redrew();
+            return;
         }
 
         // Simulate Request
-        var OPEN_RATE = 0.05;
+        var OPEN_RATE = 0.01;
         setBusy(true);
         var req = {init_sequence: d.seq, target_event: getTargetEvent()};
         d3.json(baseApiUrl + '/simulate')
@@ -147,8 +157,7 @@ var Simulator = function(options) {
             console.log(json);
             var numSample = json.n;
             d.result = SimulationResult(json, getTargetEvent());
-            var nextHash = d.result.data.next_hash;
-            _(nextHash)
+            _(d.result.data.next_hash)
             .toPairs()
             .sortBy(function(o) {return -o[1]})
             .takeWhile(function(o) { return o[1] / numSample > OPEN_RATE})
@@ -164,9 +173,14 @@ var Simulator = function(options) {
                 };
                 d.children.push(newNode);
             });
-            treeView.draw(root, callback);
-            setBusy(false);
+
+            redrew();
         });
+    }
+
+    function redrew() {
+        treeView.draw(root, callback);
+        setBusy(false);
     }
 
     function setBusy(flg) {
@@ -179,8 +193,6 @@ var Simulator = function(options) {
     }
 
     function getTargetEvent() { return "activities.shopping_complete"; }
-//    function getTargetCount(d) {return d.result.count_hash[getTargetEvent()];}
-//    function getParentTargetCount(d) {return getTargetCount(d.parent);}
 }
 
 function SimulationResult(data, targetEvent) {

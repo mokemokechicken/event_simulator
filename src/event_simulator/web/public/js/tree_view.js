@@ -48,7 +48,7 @@ function drawTree(svg, tree, root, cb, diagonal) {
     // update Links
     var link = svg.selectAll(".link").data(tree.links(nodes), linkId);
 
-    link.enter()
+    var linkEnter = link.enter()
         .append("path")
         .attr("class","link")
         .attr("d", function(d) {
@@ -65,7 +65,7 @@ function drawTree(svg, tree, root, cb, diagonal) {
     // Update Nodes
     var node = svg.selectAll(".node").data(nodes, nodeId);
 
-    node.enter()  // 新規に追加されたものだけ、こっちに来るようだ
+    var nodeEnter = node.enter()  // 新規に追加されたものだけ、こっちに来るようだ
         .append("g")
         .attr("class","node")
         .attr("transform", function(d){
@@ -82,7 +82,7 @@ function drawTree(svg, tree, root, cb, diagonal) {
         .duration(duration)
         .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")"; });
 
-    return cb(node, link);
+    return cb(node, link, nodeEnter, linkEnter);
 
     function dummyCallback(node, link) {
         node.append("circle")
