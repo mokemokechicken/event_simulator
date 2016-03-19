@@ -31,17 +31,18 @@ function SVGCanvas(options) {
 function TreeView(svg, options) {
     var options = options || {};
     var self = this;
+    self.nodeSize = options.nodeSize || [120, 120];
+    self.diagonal = d3.svg.diagonal();
     var tree = d3.layout.tree()
             //.size([width-100, height-100])
-            .nodeSize(options.nodeSize || [120, 120]);
-    self.draw = function(root, cb) { return drawTree(svg, tree, root, cb); };
+            .nodeSize(self.nodeSize);
+    self.draw = function(root, cb) { return drawTree(svg, tree, root, cb, self.diagonal); };
     return self;
 }
 
-function drawTree(svg, tree, root, cb) {
+function drawTree(svg, tree, root, cb, diagonal) {
     cb = cb || dummyCallback;
     var duration = 200;
-    var diagonal = d3.svg.diagonal();
     var nodes = tree.nodes(root);
 
     // Update Nodes
