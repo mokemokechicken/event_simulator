@@ -20,28 +20,48 @@ var Simulator = function(options) {
             .text(function(d) { return d.name})
             .attr("x", 5);
 
-        node.on('click', function(d, i) {
-            if (!d.children) {
-                d.children = [];
-            }
-
-            var req = {init_sequence: d.seq, target_event: "activities.shopping_complete"};
-            d3.json(baseApiUrl + '/simulate')
-            .header("Content-Type", "application/json")
-            .post(JSON.stringify(req), function(err, json) {
-                if (err) return console.log(err);
-                console.log(json);
-
-            });
-
-//            var id = d.name + '-' + (d.children.length+1);
-//            d.children.push({id: id, name: id, parent: d});
-//            treeView.draw(root, callback);
-        });
+        node.on('click', onClickNode);
 
         link.attr("fill", "none")
             .attr("stroke", "red");
     }
+
+    function onClickNode(d, i) {
+        if (!d.children) {
+            d.children = [];
+        }
+        var targetEvent = getTargetEvent();
+        var OPEN_RATE = 0.01;
+
+        var req = {init_sequence: d.seq, target_event: targetEvent};
+        d3.json(baseApiUrl + '/simulate')
+        .header("Content-Type", "application/json")
+        .post(JSON.stringify(req), function(err, json) {
+            if (err) return console.log(err);
+            console.log(json);
+            var numSample = json.n;
+            d.simulation = json;
+            var nextHash = d.simulation.next_hash;
+            _(nextHash)
+            .toPairs()
+            .sortBy(function(o) {return -o[1]})
+            .takeWhile(function(o) { return o[1] / numSample > OPEN_RATE})
+            .forIn(function(o) {
+                var event = o[0];
+                var seq = d.seq.concat(event);
+                var newNode = {
+                    id: seq.join("\t"),
+                    name: event,
+                    parent: d,
+                    seq: seq
+                };
+                d.children.push(newNode);
+            });
+            treeView.draw(root, callback);
+        });
+    }
+
+    function getTargetEvent() { return "activities.shopping_complete"; }
 }
 
 /*

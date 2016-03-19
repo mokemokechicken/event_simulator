@@ -30,6 +30,7 @@ class Simulator:
         target_next_hash = cnt_hash['target_next_hash']
         not_target_next_hash = cnt_hash['not_target_next_hash']
         cnt_hash['next_hash'] = next_hash = self.get_next_event_hash(sequence_list)
+        cnt_hash['n'] = self.num_sample
 
         if print_output:
             print("============= Target Event =================")
