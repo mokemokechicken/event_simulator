@@ -8,6 +8,8 @@ var Simulator = function(options) {
         , rectWidth = sx/3 * 2
         , rectHeight = sy/2
         ;
+    var isBusy;
+    setBusy(false);
 
     d3.json(baseApiUrl + '/events', function(err, json) {
         events = json.events;
@@ -43,7 +45,7 @@ var Simulator = function(options) {
                     var sr = d.source.result;
                     var tr = sr.getTargetTransitionRate(d.target.event);
                     var ntr = sr.getNotTargetTransitionRate(d.target.event);
-                    return d3.rgb(Math.log(ntr/tr)*10+127, Math.log(tr/ntr)*10+127, 20);
+                    return d3.rgb(Math.log(ntr/tr)*30+127, Math.log(tr/ntr)*30+127, 20);
                 } else {
                     return "#ccc";
                 }
@@ -116,20 +118,35 @@ var Simulator = function(options) {
     }
 
     function onClickNode(d, i) {
-        if (!d.children) {
-            d.children = [];
-        }
-        var targetEvent = getTargetEvent();
-        var OPEN_RATE = 0.05;
+        if (isBusy) return;
 
-        var req = {init_sequence: d.seq, target_event: targetEvent};
+        // Show/Hide children nodes
+        if (!d.children) {
+            if (d._children) { // restore from cache
+                d.children = d._children;
+                delete d._children;
+                return treeView.draw(root, callback);
+            } else {
+                d.children = [];
+            }
+        } else {
+            d._children = d.children;
+            delete d.children;
+            return treeView.draw(root, callback);
+        }
+
+        // Simulate Request
+        var OPEN_RATE = 0.05;
+        setBusy(true);
+        var req = {init_sequence: d.seq, target_event: getTargetEvent()};
         d3.json(baseApiUrl + '/simulate')
         .header("Content-Type", "application/json")
         .post(JSON.stringify(req), function(err, json) {
+            setBusy(false);
             if (err) return console.log(err);
             console.log(json);
             var numSample = json.n;
-            d.result = SimulationResult(json, targetEvent);
+            d.result = SimulationResult(json, getTargetEvent());
             var nextHash = d.result.data.next_hash;
             _(nextHash)
             .toPairs()
@@ -148,7 +165,17 @@ var Simulator = function(options) {
                 d.children.push(newNode);
             });
             treeView.draw(root, callback);
+            setBusy(false);
         });
+    }
+
+    function setBusy(flg) {
+        isBusy = flg;
+        if (isBusy) {
+            d3.selectAll(".node").style("cursor", "wait");
+        } else {
+            d3.selectAll(".node").style("cursor", "pointer");
+        }
     }
 
     function getTargetEvent() { return "activities.shopping_complete"; }
