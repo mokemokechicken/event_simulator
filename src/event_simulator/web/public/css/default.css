@@ -3,7 +3,6 @@
 }
 
 .link {
-    stroke: #ccc;
 }
 
 .node {
@@ -11,9 +10,9 @@
 }
 
 .node rect {
-    fill-opacity: 0;
+    fill-opacity: .2;
+    stroke: blue;
     stroke-width: 1px;
-    stroke: #0f6faf;
     stroke-opacity: .9;
 }
 

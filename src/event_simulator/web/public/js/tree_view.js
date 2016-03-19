@@ -45,6 +45,23 @@ function drawTree(svg, tree, root, cb, diagonal) {
     var duration = 200;
     var nodes = tree.nodes(root);
 
+    // update Links
+    var link = svg.selectAll(".link").data(tree.links(nodes), linkId);
+
+    link.enter()
+        .append("path")
+        .attr("class","link")
+        .attr("d", function(d) {
+            var o = {x: d.source.x, y: d.source.y};
+            return diagonal({source: o, target: o});
+        });
+
+    link.exit().remove();
+
+    link.transition()
+        .duration(duration)
+        .attr("d", diagonal);
+
     // Update Nodes
     var node = svg.selectAll(".node").data(nodes, nodeId);
 
@@ -64,23 +81,6 @@ function drawTree(svg, tree, root, cb, diagonal) {
     node.transition()   // 全ての nodes に対する操作
         .duration(duration)
         .attr("transform", function(d){ return "translate("+ d.x + "," + d.y + ")"; });
-
-    // update Links
-    var link = svg.selectAll(".link").data(tree.links(nodes), linkId);
-
-    link.enter()
-        .append("path")
-        .attr("class","link")
-        .attr("d", function(d) {
-            var o = {x: d.source.x, y: d.source.y};
-            return diagonal({source: o, target: o});
-        });
-
-    link.exit().remove();
-
-    link.transition()
-        .duration(duration)
-        .attr("d", diagonal);
 
     return cb(node, link);
 
