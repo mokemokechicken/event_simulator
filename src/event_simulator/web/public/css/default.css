@@ -2,6 +2,11 @@
     cursor: move;
 }
 
+svg {
+    border: double 1px #aaaaff;
+}
+
+
 .link {
 }
 
@@ -23,3 +28,4 @@
     pointer-events: none;
     font: 10px sans-serif;
 }
+

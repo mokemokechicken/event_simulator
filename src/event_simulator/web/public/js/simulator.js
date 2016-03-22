@@ -7,7 +7,7 @@ var Simulator = function(options) {
 
     // View Control
     var controlPlace = options.control || "body";
-    var selectTag, addButton;
+    var selectTag, addButton, openRateTag, statusTag;
     var selectedNode;
     var sx = treeView.nodeSize[0]
         , sy = treeView.nodeSize[1]
@@ -17,24 +17,39 @@ var Simulator = function(options) {
     var isBusy;
     setBusy(false);
 
+    ////// 全体的なView //////
+
     // load and setup event list
     d3.json(baseApiUrl + '/events', function(err, json) {
         events = _.sortBy(json.events);
-        console.log(json);
         addButton = d3.select(controlPlace)
             .append("button")
             .attr("class", "button")
             .text("Add Event")
             .on("click", onAddButton);
+
         selectTag = d3.select(controlPlace)
             .append("select")
             .attr("class", "select");
-            //.on("change", function(d) {console.log(select[0][0].selectedOptions[0].value)});
+
         var options = selectTag
             .selectAll('option')
             .data(events).enter()
             .append('option')
             .text(function (d) { return d; });
+
+        d3.select(controlPlace)
+            .append("input")
+            .attr("id", "openRate")
+            .attr("type", "text")
+            .attr("size", 10)
+            .attr("value", 0.05);
+        openRateTag = document.getElementById("openRate");
+
+        d3.select(controlPlace)
+            .append("div")
+            .attr("id", "statusTag");
+        statusTag = document.getElementById("statusTag");
     });
 
     treeView.diagonal = function(d) {
@@ -42,7 +57,18 @@ var Simulator = function(options) {
         return d3.svg.diagonal()({source: newSource, target: d.target});
     }
 
+    var tooltip = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 0);
+
     redrew();
+
+    return;
+
+    function redrew() {
+        treeView.draw(root, callback);
+        setBusy(false);
+    }
 
     function callback(node, link, nodeEnter, linkEnter) {
         var longPressTimer;
@@ -88,8 +114,7 @@ var Simulator = function(options) {
             .attr("width", rectWidth)
             .attr("height", rectHeight)
             .append("title")
-            .text(function(d) { return d.name})
-            ;
+            .text(function(d) { return d.name});
 
         node.selectAll("rect")
             .attr("fill", function(d) {
@@ -148,6 +173,10 @@ var Simulator = function(options) {
         nodeEnter.on("click", onClickNode);
     }
 
+    ///////////////////////////////////////////////////////
+    // Actions
+    ///////////////////////////////////////////////////////
+
     function onClickNode(d) {
         console.log(d);
         if (selectedNode) {
@@ -155,6 +184,8 @@ var Simulator = function(options) {
         }
         selectedNode = d;
         d3.select("#" + selectedNode.id).classed("selected", true);
+        statusTag.innerText = d.name;
+
     }
 
     function onAddButton() {
@@ -169,18 +200,8 @@ var Simulator = function(options) {
         d3.event.stopPropagation();
         if (isBusy) return;
 
-        // Show/Hide children nodes
-        if (!d.children) {
-            if (d._children) { // restore from cache
-                d.children = d._children;
-                delete d._children;
-                redrew();
-                return;
-            } else {
-                d.children = [];
-            }
-        } else {
-            d._children = d.children;
+        // Hide children nodes
+        if (d.children) {
             delete d.children;
             redrew();
             return;
@@ -190,8 +211,10 @@ var Simulator = function(options) {
 
     function simulateRequest(d) {
         if (isBusy) return;
+
         // Simulate Request
-        var OPEN_RATE = 0.01;
+        var openRate = openRateTag.value;
+
         setBusy(true);
         var req = {init_sequence: d.seq, target_event: getTargetEvent()};
         d3.json(baseApiUrl + '/simulate')
@@ -200,7 +223,7 @@ var Simulator = function(options) {
             setBusy(false);
             if (err) return console.log(err);
             d.result = SimulationResult(json, getTargetEvent());
-            expandChildren(d, OPEN_RATE);
+            expandChildren(d, openRate);
             redrew();
         });
     }
@@ -237,17 +260,14 @@ var Simulator = function(options) {
         return newNode;
     }
 
-    function redrew() {
-        treeView.draw(root, callback);
-        setBusy(false);
-    }
-
     function setBusy(flg) {
         isBusy = flg;
         if (isBusy) {
             d3.selectAll(".node").style("cursor", "wait");
+            d3.selectAll("svg").style("cursor", "wait");
         } else {
             d3.selectAll(".node").style("cursor", "pointer");
+            d3.selectAll("svg").style("cursor", "move");
         }
     }
 
