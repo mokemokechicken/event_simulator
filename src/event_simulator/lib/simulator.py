@@ -117,7 +117,7 @@ class Simulator:
 
 def simulate_sequence(session, model, init_sequence=None):
     init_sequence = init_sequence or []
-    state = model.initial_state.eval()
+    state = model.initial_state.eval(session=session)
     primes = [DataFeeder.START_ID] + init_sequence
     print("generating...")
     for event_id in primes[:-1]:

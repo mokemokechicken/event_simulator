@@ -5,10 +5,14 @@ from event_simulator.lib.simulator import Simulator
 class WebSimulator:
     simulator = None
     data_feeder = None
+    num_sample = None
+    model_path = None
 
     def setup(self, data_feeder, session, config, model_path):
         self.data_feeder = data_feeder
         self.simulator = Simulator(data_feeder, session, config, model_path)
+        self.num_sample = config.batch_size
+        self.model_path = model_path
 
     def get_event_list(self):
         return [k for k, v in self.data_feeder.mapping.items() if v >= self.data_feeder.NORMAL_EVENT_START_ID]

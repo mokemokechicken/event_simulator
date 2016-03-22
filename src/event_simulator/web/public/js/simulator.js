@@ -7,7 +7,7 @@ var Simulator = function(options) {
 
     // View Control
     var controlPlace = options.control || "body";
-    var selectTag, addButton, openRateTag, statusTag;
+    var selectTag, addButton, openRateTag, statusTag, numSampleTag;
     var selectedNode;
     var sx = treeView.nodeSize[0]
         , sy = treeView.nodeSize[1]
@@ -45,6 +45,15 @@ var Simulator = function(options) {
             .attr("size", 10)
             .attr("value", 0.05);
         openRateTag = document.getElementById("openRate");
+
+        d3.select(controlPlace)
+            .append("input")
+            .attr("id", "numSample")
+            .attr("type", "text")
+            .attr("size", 10)
+            .attr("value", 10000);
+        numSampleTag = document.getElementById("numSample");
+
 
         d3.select(controlPlace)
             .append("div")
@@ -119,7 +128,7 @@ var Simulator = function(options) {
         node.selectAll("rect")
             .attr("fill", function(d) {
                 if (d.result && d.parent) {
-                    var greenRate = d.result.targetCount / (d.parent.result.targetCount + d.result.targetCount);
+                    var greenRate = d.result.targetRate / (d.parent.result.targetRate + d.result.targetRate);
                     return d3.rgb((1-greenRate)*255, greenRate*255, 20);
                 } else {
                     return "#ccc";
@@ -214,9 +223,10 @@ var Simulator = function(options) {
 
         // Simulate Request
         var openRate = openRateTag.value;
+        var numSample = numSampleTag.value;
 
         setBusy(true);
-        var req = {init_sequence: d.seq, target_event: getTargetEvent()};
+        var req = {init_sequence: d.seq, target_event: getTargetEvent(), num_sample: numSample};
         d3.json(baseApiUrl + '/simulate')
         .header("Content-Type", "application/json")
         .post(JSON.stringify(req), function(err, json) {
