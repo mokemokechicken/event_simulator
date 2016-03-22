@@ -8,6 +8,10 @@
 .node {
 }
 
+.node .selected {
+    stroke-width: 3px;
+}
+
 .node rect {
     fill-opacity: .2;
     stroke: blue;

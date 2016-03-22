@@ -2,6 +2,7 @@ var Simulator = function(options) {
     var baseApiUrl = options.baseApiUrl || '/api';
     var treeView = options.treeView;
     var root = options.root;
+    root.id = nodeId(root);
     var events = [];
 
     // View Control
@@ -24,7 +25,7 @@ var Simulator = function(options) {
             .append("button")
             .attr("class", "button")
             .text("Add Event")
-            .on("click", function() {console.log(selectTag[0][0].selectedOptions[0].value)})
+            .on("click", onAddButton);
         selectTag = d3.select(controlPlace)
             .append("select")
             .attr("class", "select");
@@ -82,6 +83,7 @@ var Simulator = function(options) {
         //
 
         nodeEnter.append("rect")
+            .attr("id", function(d) {return d.id})
             .attr("x", -rectWidth/2)
             .attr("width", rectWidth)
             .attr("height", rectHeight)
@@ -147,11 +149,20 @@ var Simulator = function(options) {
     }
 
     function onClickNode(d) {
+        console.log(d);
         if (selectedNode) {
-            selectedNode.classed("selected", false);
+            d3.select("#" + selectedNode.id).classed("selected", false);
         }
         selectedNode = d;
-        selectedNode.classed("selected", true);
+        d3.select("#" + selectedNode.id).classed("selected", true);
+    }
+
+    function onAddButton() {
+        if (!selectedNode || isBusy) return;
+        var event = selectTag[0][0].selectedOptions[0].value;
+
+        var newNode = addChildNode(selectedNode, event);
+        simulateRequest(newNode);
     }
 
     function onDoubleClickNode(d) {
@@ -174,7 +185,11 @@ var Simulator = function(options) {
             redrew();
             return;
         }
+        simulateRequest(d);
+    }
 
+    function simulateRequest(d) {
+        if (isBusy) return;
         // Simulate Request
         var OPEN_RATE = 0.01;
         setBusy(true);
@@ -184,7 +199,6 @@ var Simulator = function(options) {
         .post(JSON.stringify(req), function(err, json) {
             setBusy(false);
             if (err) return console.log(err);
-            console.log(json);
             d.result = SimulationResult(json, getTargetEvent());
             expandChildren(d, OPEN_RATE);
             redrew();
@@ -197,17 +211,30 @@ var Simulator = function(options) {
         .sortBy(function(o) {return -o[1]})
         .takeWhile(function(o) { return o[1] / d.result.numSample > openRate})
         .forIn(function(o) {
-            var event = o[0];
-            var seq = d.seq.concat(event);
-            var newNode = {
-                id: seq.join("\t"),
-                name: event,
-                event: event,
-                parent: d,
-                seq: seq
-            };
-            d.children.push(newNode);
+            addChildNode(d, o[0]);
         });
+    }
+
+    function addChildNode(parent, event) {
+        if (!parent.children) {
+            parent.children = [];
+        }
+        var seq = parent.seq.concat(event);
+
+        var newNode = {
+            name: event,
+            event: event,
+            parent: parent,
+            seq: seq
+        };
+        newNode.id = nodeId(newNode);
+        var childIndex = _.findIndex(parent.children, function(o){return o.id === newNode.id});
+        if (childIndex === -1) {
+            parent.children.push(newNode);
+        } else {
+            newNode = parent.children[childIndex];
+        }
+        return newNode;
     }
 
     function redrew() {
@@ -225,6 +252,10 @@ var Simulator = function(options) {
     }
 
     function getTargetEvent() { return "activities.shopping_complete"; }
+}
+
+function nodeId(d) {
+    return btoa(d.seq.join("--")).replace(/=/g, "");
 }
 
 function SimulationResult(data, targetEvent) {

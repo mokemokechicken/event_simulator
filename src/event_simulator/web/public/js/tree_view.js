@@ -158,7 +158,6 @@ function nodeId(d) {
 }
 
 function nodeX(d) {
-console.log(d);
   return d.x;
 }
 
