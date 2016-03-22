@@ -31,7 +31,7 @@ function SVGCanvas(options) {
 function TreeView(svg, options) {
     var options = options || {};
     var self = this;
-    self.nodeSize = options.nodeSize || [120, 120];
+    self.nodeSize = options.nodeSize || [100, 100];
     self.diagonal = d3.svg.diagonal();
     var tree = d3.layout.tree()
             //.size([width-100, height-100])

@@ -1,19 +1,39 @@
 var Simulator = function(options) {
+    var baseApiUrl = options.baseApiUrl || '/api';
     var treeView = options.treeView;
     var root = options.root;
     var events = [];
-    var baseApiUrl = options.baseApiUrl || '/api';
+
+    // View Control
+    var controlPlace = options.control || "body";
+    var selectTag, addButton;
+    var selectedNode;
     var sx = treeView.nodeSize[0]
         , sy = treeView.nodeSize[1]
-        , rectWidth = sx/3 * 2
+        , rectWidth = sx/8 * 7
         , rectHeight = sy/2
         ;
     var isBusy;
     setBusy(false);
 
+    // load and setup event list
     d3.json(baseApiUrl + '/events', function(err, json) {
-        events = json.events;
+        events = _.sortBy(json.events);
         console.log(json);
+        addButton = d3.select(controlPlace)
+            .append("button")
+            .attr("class", "button")
+            .text("Add Event")
+            .on("click", function() {console.log(selectTag[0][0].selectedOptions[0].value)})
+        selectTag = d3.select(controlPlace)
+            .append("select")
+            .attr("class", "select");
+            //.on("change", function(d) {console.log(select[0][0].selectedOptions[0].value)});
+        var options = selectTag
+            .selectAll('option')
+            .data(events).enter()
+            .append('option')
+            .text(function (d) { return d; });
     });
 
     treeView.diagonal = function(d) {
@@ -21,9 +41,10 @@ var Simulator = function(options) {
         return d3.svg.diagonal()({source: newSource, target: d.target});
     }
 
-    treeView.draw(root, callback);
+    redrew();
 
     function callback(node, link, nodeEnter, linkEnter) {
+        var longPressTimer;
         var lineStep = 15;
         var percentFormat = d3.format(".1%");
 
@@ -121,10 +142,19 @@ var Simulator = function(options) {
             .attr("y", -3)
             .style("text-anchor", "middle");
 
-        nodeEnter.on('dblclick', onClickNode);
+        nodeEnter.on("dblclick", onDoubleClickNode);
+        nodeEnter.on("click", onClickNode);
     }
 
     function onClickNode(d) {
+        if (selectedNode) {
+            selectedNode.classed("selected", false);
+        }
+        selectedNode = d;
+        selectedNode.classed("selected", true);
+    }
+
+    function onDoubleClickNode(d) {
         d3.event.stopPropagation();
         if (isBusy) return;
 
@@ -155,26 +185,28 @@ var Simulator = function(options) {
             setBusy(false);
             if (err) return console.log(err);
             console.log(json);
-            var numSample = json.n;
             d.result = SimulationResult(json, getTargetEvent());
-            _(d.result.data.next_hash)
-            .toPairs()
-            .sortBy(function(o) {return -o[1]})
-            .takeWhile(function(o) { return o[1] / numSample > OPEN_RATE})
-            .forIn(function(o) {
-                var event = o[0];
-                var seq = d.seq.concat(event);
-                var newNode = {
-                    id: seq.join("\t"),
-                    name: event,
-                    event: event,
-                    parent: d,
-                    seq: seq
-                };
-                d.children.push(newNode);
-            });
-
+            expandChildren(d, OPEN_RATE);
             redrew();
+        });
+    }
+
+    function expandChildren(d, openRate) {
+        _(d.result.data.next_hash)
+        .toPairs()
+        .sortBy(function(o) {return -o[1]})
+        .takeWhile(function(o) { return o[1] / d.result.numSample > openRate})
+        .forIn(function(o) {
+            var event = o[0];
+            var seq = d.seq.concat(event);
+            var newNode = {
+                id: seq.join("\t"),
+                name: event,
+                event: event,
+                parent: d,
+                seq: seq
+            };
+            d.children.push(newNode);
         });
     }
 
@@ -198,6 +230,7 @@ var Simulator = function(options) {
 function SimulationResult(data, targetEvent) {
     var self = {};
     self.data = data;
+    self.numSample = data.n;
     self.targetEvent = targetEvent;
 
     self.targetCount = data.count_hash[targetEvent];

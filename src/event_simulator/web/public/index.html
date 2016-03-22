@@ -8,6 +8,7 @@
     <script src="/public/js/simulator.js"></script>
 </head>
 <body>
+<div id="control"></div>
 <div id="svg" style="width: 800; height: 600"></div>
 
 <script>
@@ -18,6 +19,7 @@
     }).svg);
 
     var sim = Simulator({
+        control: "#control",
         treeView: treeView,
         root: {
             id: "_new_",
